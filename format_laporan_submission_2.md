@@ -1,4 +1,4 @@
-# Laporan Proyek Machine Learning - Nama Anda
+# Laporan Proyek Machine Learning - Rifky Maulana Pasaribu
 
 ## Project Overview
 
@@ -70,42 +70,242 @@ Selain sinopsis, sistem juga mempertimbangkan **genre** film. Genre diubah menja
 > Kombinasi kedua pendekatan ini membantu menghasilkan rekomendasi yang lebih akurat dan personal karena mempertimbangkan deskripsi dan genre secara bersamaan.
 
 ## Data Understanding
-Paragraf awal bagian ini menjelaskan informasi mengenai jumlah data, kondisi data, dan informasi mengenai data yang digunakan. Sertakan juga sumber atau tautan untuk mengunduh dataset. Contoh: [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Restaurant+%26+consumer+data).
 
-Selanjutnya, uraikanlah seluruh variabel atau fitur pada data. Sebagai contoh:  
+Dataset yang digunakan dalam proyek sistem rekomendasi film ini terdiri dari **1.272 entri** dengan **12 kolom fitur**, yang berisi berbagai informasi penting mengenai film, seperti judul, tahun rilis, genre, aktor, bahasa, dan lainnya. Dataset ini digunakan untuk membangun model rekomendasi berbasis *content-based filtering*.
 
-Variabel-variabel pada Restaurant UCI dataset adalah sebagai berikut:
-- accepts : merupakan jenis pembayaran yang diterima pada restoran tertentu.
-- cuisine : merupakan jenis masakan yang disajikan pada restoran.
-- dst
+link: https://www.kaggle.com/datasets/haryodwi/database-film-indonesia
 
-**Rubrik/Kriteria Tambahan (Opsional)**:
-- Melakukan beberapa tahapan yang diperlukan untuk memahami data, contohnya teknik visualisasi data beserta insight atau exploratory data analysis.
+### Kondisi Data
+
+* Sebagian kolom memiliki data yang tidak lengkap:
+
+  * `description`: hanya tersedia 840 dari 1272 entri.
+  * `genre`: terdapat 36 nilai kosong.
+  * `rating`: hanya terisi pada 376 entri.
+  * `runtime`: 403 nilai kosong.
+  * `directors`: 7 nilai kosong.
+* Format data untuk kolom `votes` dan `runtime` masih berupa string, sehingga perlu dilakukan *data cleaning* sebelum dianalisis atau digunakan dalam model.
+
+### Variabel dalam Dataset:
+
+* **movie\_id** : ID unik untuk setiap film (numerik).
+* **title** : Judul film (teks).
+* **year** : Tahun rilis film (numerik).
+* **description** : Deskripsi atau sinopsis film (teks).
+* **genre** : Genre film, bisa lebih dari satu genre (teks).
+* **rating** : Rating umum film, misalnya PG-13, R (teks).
+* **users\_rating** : Rating rata-rata dari pengguna (numerik, float).
+* **votes** : Jumlah pemilih yang memberikan rating (string, perlu dikonversi).
+* **languages** : Bahasa yang digunakan dalam film (teks).
+* **directors** : Nama sutradara film (teks).
+* **actors** : Daftar aktor yang membintangi film (teks).
+* **runtime** : Durasi film (string, perlu dikonversi menjadi satuan menit).
+
+### Eksplorasi Data (Exploratory Data Analysis)
+
+Untuk memahami lebih jauh isi dataset, dilakukan beberapa eksplorasi awal, antara lain:
+
+#### 1. Visualisasi 10 Genre Terbanyak
+
+Hasil visualisasi menunjukkan bahwa genre **Drama**, **Comedy**, **Horror**, dan **Action** adalah genre yang paling sering muncul dalam dataset. Ini menunjukkan preferensi atau ketersediaan data lebih besar di genre-genre populer tersebut.
+
+#### 2. Distribusi Jumlah Film per Tahun
+
+Dari grafik yang dianalisis, jumlah produksi film meningkat secara signifikan dari tahun 2000-an hingga 2020. Ini menunjukkan adanya tren peningkatan produksi film digital serta kemudahan distribusi film dalam dekade terakhir.
+
+### Insight Tambahan
+
+* Beberapa film tidak memiliki `description`, `runtime`, atau `genre`, yang dapat memengaruhi kinerja sistem rekomendasi berbasis konten.
+* Akan dilakukan proses *imputation* atau penghapusan data tergantung pada jumlah dan pentingnya fitur tersebut dalam sistem rekomendasi.
+
+Dataset ini menyediakan fondasi yang cukup kaya untuk membangun sistem rekomendasi film berbasis *content-based filtering*, terutama dengan memanfaatkan fitur seperti `description`, `genre`, dan `actors`.
 
 ## Data Preparation
-Pada bagian ini Anda menerapkan dan menyebutkan teknik data preparation yang dilakukan. Teknik yang digunakan pada notebook dan laporan harus berurutan.
 
-**Rubrik/Kriteria Tambahan (Opsional)**: 
-- Menjelaskan proses data preparation yang dilakukan
-- Menjelaskan alasan mengapa diperlukan tahapan data preparation tersebut.
+Pada tahap ini, dilakukan beberapa proses persiapan data (data preparation) sebelum digunakan dalam pembuatan sistem rekomendasi berbasis konten (content-based recommender). Tahapan ini penting untuk memastikan bahwa data berada dalam format yang sesuai dan lengkap agar analisis dan pemodelan dapat dilakukan dengan optimal.
+
+Berikut adalah langkah-langkah data preparation yang dilakukan:
+
+### 1. Penanganan Nilai Kosong (Missing Values)
+
+Beberapa fitur seperti `description` dan `genre` memiliki nilai kosong (NaN). Untuk menghindari error pada proses pemodelan dan vektorisasi teks, nilai kosong ini diganti dengan string kosong:
+
+```python
+# Ganti NaN dengan string kosong
+dataset['description'] = dataset['description'].fillna('')
+dataset['genre'] = dataset['genre'].fillna('')
+```
+
+**Alasan:**
+
+* Teks kosong tidak akan mempengaruhi perhitungan TF-IDF secara signifikan.
+* Menghindari error ketika melakukan penggabungan string atau proses vektorisasi teks.
+
+### 2. Pembuatan Fitur Gabungan (Combined Features)
+
+Untuk membuat sistem rekomendasi berbasis konten, informasi teks dari beberapa fitur digabungkan menjadi satu fitur gabungan (`combined_features`). Dalam kasus ini, fitur yang digunakan adalah `description` dan `genre`:
+
+```python
+# Gabungkan konten untuk fitur text
+dataset['combined_features'] = dataset['description'] + ' ' + dataset['genre']
+```
+
+**Alasan:**
+
+* Menggabungkan fitur teks memungkinkan model mengenali konteks yang lebih luas tentang film.
+* `description` menggambarkan sinopsis, sementara `genre` menggambarkan kategori film — keduanya relevan untuk sistem rekomendasi.
+
+### 3. Vektorisasi Teks (TF-IDF)
+
+Fitur gabungan yang sudah dibuat kemudian ditransformasikan ke dalam bentuk vektor menggunakan TF-IDF (Term Frequency-Inverse Document Frequency):
+
+```python
+self.tfidf = TfidfVectorizer(max_features=1000, stop_words='english')
+tfidf_matrix = self.tfidf.fit_transform(df['combined_features'])
+```
+
+**Alasan:**
+
+* TF-IDF digunakan untuk mengukur pentingnya sebuah kata terhadap dokumen dalam korpus.
+* Menghilangkan stop words membantu mengurangi noise dalam data teks.
+
+### 4. Penghitungan Similaritas (Cosine Similarity)
+
+Setelah TF-IDF matrix didapatkan, langkah selanjutnya adalah menghitung kemiripan antar film menggunakan cosine similarity:
+
+```python
+self.cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+```
+
+**Alasan:**
+
+* Cosine similarity adalah metode umum untuk mengukur kemiripan antar dokumen teks.
+* Digunakan untuk menentukan film mana yang memiliki konten serupa.
+
+### 5. Indexing Data Judul
+
+Agar lebih efisien dalam pencarian, dilakukan pembuatan indeks berdasarkan judul film:
+
+```python
+self.indices = pd.Series(df.index, index=df['title']).drop_duplicates()
+```
+
+**Alasan:**
+
+* Mempermudah pemetaan dari judul film ke indeks dataset.
+* Diperlukan dalam proses pencarian rekomendasi.
+
+---
+
+Semua proses di atas merupakan tahap persiapan yang esensial dalam membangun sistem rekomendasi berbasis konten dengan pendekatan NLP (Natural Language Processing). Tanpa tahapan ini, data tidak akan siap digunakan untuk pemodelan atau bisa menghasilkan model yang tidak akurat.
+
 
 ## Modeling
-Tahapan ini membahas mengenai model sisten rekomendasi yang Anda buat untuk menyelesaikan permasalahan. Sajikan top-N recommendation sebagai output.
 
-**Rubrik/Kriteria Tambahan (Opsional)**: 
-- Menyajikan dua solusi rekomendasi dengan algoritma yang berbeda.
-- Menjelaskan kelebihan dan kekurangan dari solusi/pendekatan yang dipilih.
+Pada tahapan ini, dilakukan pembangunan model sistem rekomendasi untuk memberikan rekomendasi film berdasarkan kemiripan konten. Model yang digunakan adalah *Content-Based Filtering*, dan untuk memperkaya hasil, ditambahkan juga alternatif model menggunakan *K-Nearest Neighbors (KNN)* sebagai pembanding.
+
+### 1. Content-Based Filtering
+
+Model ini memanfaatkan fitur teks dari film, seperti genre, sutradara, dan sinopsis yang telah digabung dalam fitur `combined_features`. Proses pembuatan model melibatkan:
+
+* **Ekstraksi fitur teks** menggunakan `TfidfVectorizer`.
+* **Pengukuran kemiripan** antar film dengan menggunakan *cosine similarity*.
+* **Rekomendasi** film dihitung berdasarkan skor kemiripan tertinggi terhadap film yang dipilih.
+
+```python
+# Train Model
+recommender = MovieRecommender()
+recommender.fit(dataset)
+```
+
+Contoh rekomendasi yang dihasilkan ketika pengguna memilih film `#FriendButMarried 2`:
+
+```
+Rekomendasi:
+     title                   genre      users_rating
+131  #FriendButMarried      Biography        6.9
+1118 Johny Indo             Biography        7.6
+224  Udah Putusin Aja!      Drama            7.2
+962  Brownies               Drama            6.0
+414  3600 Detik             Drama            6.6
+```
+
+### 2. K-Nearest Neighbors (KNN)
+
+Solusi alternatif kedua adalah menggunakan algoritma **KNN**, yang bekerja dengan menemukan film terdekat (berdasarkan fitur numerik atau vektorisasi konten) dari film yang dipilih pengguna.
+
+Implementasi secara umum:
+
+* Mengubah data teks menjadi vektor menggunakan TF-IDF.
+* Menggunakan `NearestNeighbors` dari scikit-learn untuk mencari film terdekat.
+* Memberikan top-N rekomendasi.
+
+```python
+from sklearn.neighbors import NearestNeighbors
+
+model_knn = NearestNeighbors(metric='cosine', algorithm='brute')
+model_knn.fit(tfidf_matrix)
+```
+
+### Perbandingan Model
+
+| Aspek          | Content-Based Filtering                  | K-Nearest Neighbors (KNN)                             |
+| -------------- | ---------------------------------------- | ----------------------------------------------------- |
+| **Kelebihan**  | - Relevan dengan konten film             | - Mudah diimplementasikan                             |
+|                | - Tidak tergantung pada rating user lain | - Dapat digunakan dengan data numerik/non-text        |
+| **Kekurangan** | - Kurang mampu menangkap selera pengguna | - Tidak terlalu akurat pada dataset besar             |
+|                | - Butuh preprocessing teks yang baik     | - Bisa overfitting pada data yang sparsity-nya tinggi |
+
+### Kesimpulan
+
+Model utama yang digunakan adalah Content-Based Filtering karena lebih sesuai dengan karakteristik dataset yang tersedia (berisi teks seperti genre dan sinopsis). Namun, model KNN juga disiapkan sebagai solusi tambahan bila dibutuhkan analisis berbasis tetangga terdekat secara numerik.
+
+Keduanya mampu memberikan rekomendasi film berdasarkan film yang dipilih oleh pengguna dengan pendekatan berbeda, dan bisa digunakan secara bersamaan untuk menghasilkan sistem rekomendasi hibrida di masa depan.
+
 
 ## Evaluation
-Pada bagian ini Anda perlu menyebutkan metrik evaluasi yang digunakan. Kemudian, jelaskan hasil proyek berdasarkan metrik evaluasi tersebut.
 
-Ingatlah, metrik evaluasi yang digunakan harus sesuai dengan konteks data, problem statement, dan solusi yang diinginkan.
+Pada tahap evaluasi ini, sistem rekomendasi diuji menggunakan metode **rating prediction**, yaitu dengan memprediksi rating suatu film berdasarkan rating dari film-film yang direkomendasikan.
 
-**Rubrik/Kriteria Tambahan (Opsional)**: 
-- Menjelaskan formula metrik dan bagaimana metrik tersebut bekerja.
+### Metode Evaluasi:
 
-**---Ini adalah bagian akhir laporan---**
+* **Mean Squared Error (MSE)**: Rata-rata kuadrat dari selisih antara nilai aktual dan prediksi. Semakin kecil nilainya, semakin baik model.
 
-_Catatan:_
-- _Anda dapat menambahkan gambar, kode, atau tabel ke dalam laporan jika diperlukan. Temukan caranya pada contoh dokumen markdown di situs editor [Dillinger](https://dillinger.io/), [Github Guides: Mastering markdown](https://guides.github.com/features/mastering-markdown/), atau sumber lain di internet. Semangat!_
-- Jika terdapat penjelasan yang harus menyertakan code snippet, tuliskan dengan sewajarnya. Tidak perlu menuliskan keseluruhan kode project, cukup bagian yang ingin dijelaskan saja.
+  * Formula: $MSE = \frac{1}{n} \sum_{i=1}^{n}(y_i - \hat{y}_i)^2$
+* **Mean Absolute Error (MAE)**: Rata-rata dari nilai absolut selisih antara nilai aktual dan prediksi.
+
+  * Formula: $MAE = \frac{1}{n} \sum_{i=1}^{n}|y_i - \hat{y}_i|$
+* **Root Mean Squared Error (RMSE)**: Akar dari MSE, memberikan interpretasi dalam satuan yang sama dengan rating.
+
+  * Formula: $RMSE = \sqrt{MSE}$
+* **Accuracy (\u00b10.5)**: Persentase prediksi yang berada dalam rentang \u00b10.5 dari rating aktual.
+
+### Hasil Evaluasi:
+
+* Jumlah film yang dievaluasi: **100 film**
+* MSE: **2.0660**
+* MAE: **1.0049**
+* RMSE: **1.4377**
+* Accuracy (\u00b10.5): **35.0%**
+
+### Interpretasi:
+
+* Model memiliki **akurasi 35%**, artinya hanya 35 dari 100 prediksi yang memiliki selisih tidak lebih dari 0.5 dari rating asli. Ini menunjukkan bahwa model masih dapat dikembangkan lebih lanjut untuk meningkatkan performa.
+* **MAE dan RMSE** yang cukup besar menandakan bahwa prediksi rating rata-rata masih memiliki selisih lebih dari 1 poin terhadap rating aktual, yang bisa berdampak pada kepuasan pengguna terhadap sistem rekomendasi.
+
+### Visualisasi:
+
+* **Scatter plot** menunjukkan sebaran nilai aktual vs prediksi.
+* **Histogram residuals** menggambarkan distribusi kesalahan.
+* **Bar chart evaluasi** menyajikan perbandingan nilai MSE, MAE, dan RMSE.
+
+---
+
+**Kesimpulan**:
+Dari hasil evaluasi yang dilakukan menggunakan metrik MSE, MAE, RMSE, dan akurasi dengan toleransi ±0.5, diperoleh gambaran umum tentang performa sistem rekomendasi dalam memprediksi rating film. Nilai-nilai metrik tersebut memberikan informasi kuantitatif mengenai sejauh mana prediksi model mendekati nilai rating sebenarnya.
+
+Evaluasi ini menunjukkan bahwa sistem mampu menghasilkan prediksi rating berdasarkan data yang diberikan dan memberikan rekomendasi film yang sesuai dalam beberapa kasus. Visualisasi hasil seperti grafik actual vs predicted dan distribusi error juga membantu dalam memahami pola dan persebaran prediksi yang dilakukan oleh sistem.
+
+Secara umum, proses evaluasi ini memberikan gambaran menyeluruh mengenai kinerja model yang dibangun serta menjadi dasar dalam menentukan langkah selanjutnya, baik untuk pengembangan lebih lanjut maupun penerapan sistem dalam konteks nyata.
+
+**--- Ini adalah bagian akhir laporan ---**
