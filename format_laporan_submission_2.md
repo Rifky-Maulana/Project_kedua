@@ -208,7 +208,6 @@ Pada tahapan ini, dilakukan pembangunan model sistem rekomendasi untuk memberika
 
 Model ini memanfaatkan fitur teks dari film, seperti genre, sutradara, dan sinopsis yang telah digabung dalam fitur `combined_features`. Proses pembuatan model melibatkan:
 
-* **Ekstraksi fitur teks** menggunakan `TfidfVectorizer`.
 * **Pengukuran kemiripan** antar film dengan menggunakan *cosine similarity*.
 * **Rekomendasi** film dihitung berdasarkan skor kemiripan tertinggi terhadap film yang dipilih.
 
@@ -283,8 +282,8 @@ Pada tahap evaluasi ini, sistem rekomendasi diuji menggunakan metode **rating pr
 ### Hasil Evaluasi:
 
 * Jumlah film yang dievaluasi: **100 film**
-* MSE: **2.0660**
-* MAE: **1.0049**
+* MSE: **2.0669**
+* MAE: **1.0944**
 * RMSE: **1.4377**
 * Accuracy (\u00b10.5): **35.0%**
 
