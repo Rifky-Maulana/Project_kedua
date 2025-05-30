@@ -229,37 +229,13 @@ Rekomendasi:
 414  3600 Detik             Drama            6.6
 ```
 
-### 2. K-Nearest Neighbors (KNN)
-
-Solusi alternatif kedua adalah menggunakan algoritma **KNN**, yang bekerja dengan menemukan film terdekat (berdasarkan fitur numerik atau vektorisasi konten) dari film yang dipilih pengguna.
-
-Implementasi secara umum:
-
-* Mengubah data teks menjadi vektor menggunakan TF-IDF.
-* Menggunakan `NearestNeighbors` dari scikit-learn untuk mencari film terdekat.
-* Memberikan top-N rekomendasi.
-
-```python
-from sklearn.neighbors import NearestNeighbors
-
-model_knn = NearestNeighbors(metric='cosine', algorithm='brute')
-model_knn.fit(tfidf_matrix)
-```
-
-### Perbandingan Model
-
-| Aspek          | Content-Based Filtering                  | K-Nearest Neighbors (KNN)                             |
-| -------------- | ---------------------------------------- | ----------------------------------------------------- |
-| **Kelebihan**  | - Relevan dengan konten film             | - Mudah diimplementasikan                             |
-|                | - Tidak tergantung pada rating user lain | - Dapat digunakan dengan data numerik/non-text        |
-| **Kekurangan** | - Kurang mampu menangkap selera pengguna | - Tidak terlalu akurat pada dataset besar             |
-|                | - Butuh preprocessing teks yang baik     | - Bisa overfitting pada data yang sparsity-nya tinggi |
-
 ### Kesimpulan
 
-Model utama yang digunakan adalah Content-Based Filtering karena lebih sesuai dengan karakteristik dataset yang tersedia (berisi teks seperti genre dan sinopsis). Namun, model KNN juga disiapkan sebagai solusi tambahan bila dibutuhkan analisis berbasis tetangga terdekat secara numerik.
+Metode Content-Based Filtering berhasil digunakan untuk membangun sistem rekomendasi film dengan memanfaatkan fitur-fitur teks seperti genre, sutradara, dan sinopsis yang digabung dalam fitur combined_features. Proses ini memungkinkan sistem untuk menghitung kemiripan antar film menggunakan cosine similarity, lalu merekomendasikan film lain yang memiliki kemiripan tertinggi dengan film yang dipilih pengguna.
 
-Keduanya mampu memberikan rekomendasi film berdasarkan film yang dipilih oleh pengguna dengan pendekatan berbeda, dan bisa digunakan secara bersamaan untuk menghasilkan sistem rekomendasi hibrida di masa depan.
+Hasil implementasi menunjukkan bahwa saat pengguna memilih film #FriendButMarried 2, sistem mampu merekomendasikan film lain yang memiliki genre dan konten serupa, seperti Johny Indo, Udah Putusin Aja!, dan Brownies, dengan rata-rata user rating yang cukup tinggi. Hal ini menunjukkan bahwa pendekatan Content-Based Filtering dapat memberikan rekomendasi yang relevan secara konten bagi pengguna.
+
+Dengan demikian, metode ini cocok diterapkan dalam sistem rekomendasi di mana fitur-fitur item tersedia secara eksplisit dan relevan untuk dianalisis.
 
 
 ## Evaluation
